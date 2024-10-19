@@ -6,7 +6,6 @@ from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 
-
 class TimelapseApp:
     def __init__(self, root):
         self.root = root
@@ -18,8 +17,8 @@ class TimelapseApp:
         self.width = tk.IntVar()
         self.height = tk.IntVar()
 
-        self.capturing = False  # Track the capturing state
-        self.capture_thread = None  # Reference to the capture thread
+        self.capturing = threading.Event()  # Thread-safe flag
+        self.capture_thread = None
 
         self.create_widgets()
 
@@ -41,7 +40,6 @@ class TimelapseApp:
         tk.Button(self.root, text="Exit", command=self.root.quit).grid(row=6, column=0, columnspan=2)
 
     def start_capture(self):
-        # Validate user inputs
         try:
             capture_interval = float(self.capture_interval.get())
             waiting_time = int(self.waiting_time.get())
@@ -56,32 +54,37 @@ class TimelapseApp:
             return
 
         date = self.create_directory()
-        self.capturing = True
+        self.capturing.set()  # Start capturing
         self.capture_thread = threading.Thread(
-            target=self.capture_images, args=(date, capture_interval, width, height)
+            target=self.capture_images, args=(date, capture_interval, width, height), daemon=True
         )
         self.capture_thread.start()
 
     def stop_capture(self):
-        self.capturing = False  # Stop the capture loop
+        self.capturing.clear()  # Stop the capture loop
+        if self.capture_thread:
+            self.capture_thread.join()  # Wait for the thread to finish
 
     def create_directory(self):
         date = datetime.now().strftime("%Y%m%d_%H%M%S")
-        if not os.path.exists(date):
-            os.mkdir(date)
+        os.makedirs(date, exist_ok=True)
         return date
 
     def capture_images(self, date, capture_interval, width, height):
-        try:
-            cap = cv2.VideoCapture(0)
-            if not cap.isOpened():
-                raise RuntimeError("Could not open camera.")
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            messagebox.showerror("Error", "Could not open camera.")
+            return
 
-            start_time = time.time()
-            while self.capturing:
+        try:
+            while self.capturing.is_set():
+                start_time = time.time()
+
                 ret, frame = cap.read()
                 if not ret:
-                    raise RuntimeError("Failed to capture image.")
+                    messagebox.showerror("Error", "Failed to capture image.")
+                    self.stop_capture()
+                    break
 
                 frame = cv2.resize(frame, (width, height))
                 cv2.imshow("Camera", frame)
@@ -91,15 +94,13 @@ class TimelapseApp:
                 cv2.imwrite(path, frame)
 
                 elapsed_time = time.time() - start_time
-                if elapsed_time < capture_interval:
-                    time.sleep(capture_interval - elapsed_time)
-                start_time = time.time()
-
-                if cv2.waitKey(1) & 0xFF == 27:  # ESC key to stop
+                time_to_sleep = max(0, capture_interval - elapsed_time)
+                if cv2.waitKey(1) & 0xFF == 27:  # ESC to stop
                     self.stop_capture()
+                    break
 
-        except RuntimeError as e:
-            messagebox.showerror("Error", str(e))
+                time.sleep(time_to_sleep)
+
         finally:
             cap.release()
             cv2.destroyAllWindows()
