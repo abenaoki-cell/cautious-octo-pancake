@@ -4,7 +4,7 @@ import time
 import threading
 from datetime import datetime
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 
 class TimelapseApp:
     def __init__(self, root):
@@ -16,6 +16,7 @@ class TimelapseApp:
         self.waiting_time = tk.IntVar()
         self.width = tk.IntVar()
         self.height = tk.IntVar()
+        self.save_directory = tk.StringVar(value=os.getcwd())  # Default save directory
 
         self.capturing = threading.Event()  # Thread-safe flag
         self.capture_thread = None
@@ -35,9 +36,18 @@ class TimelapseApp:
         tk.Label(self.root, text="Image Height:").grid(row=3, column=0)
         tk.Entry(self.root, textvariable=self.height).grid(row=3, column=1)
 
-        tk.Button(self.root, text="Start Capture", command=self.start_capture).grid(row=4, column=0, columnspan=2)
-        tk.Button(self.root, text="Stop Capture", command=self.stop_capture).grid(row=5, column=0, columnspan=2)
-        tk.Button(self.root, text="Exit", command=self.root.quit).grid(row=6, column=0, columnspan=2)
+        tk.Label(self.root, text="Save Directory:").grid(row=4, column=0)
+        tk.Entry(self.root, textvariable=self.save_directory, state="readonly").grid(row=4, column=1)
+        tk.Button(self.root, text="Select Folder", command=self.select_directory).grid(row=4, column=2)
+
+        tk.Button(self.root, text="Start Capture", command=self.start_capture).grid(row=5, column=0, columnspan=2)
+        tk.Button(self.root, text="Stop Capture", command=self.stop_capture).grid(row=6, column=0, columnspan=2)
+        tk.Button(self.root, text="Exit", command=self.exit_app).grid(row=7, column=0, columnspan=2)
+
+    def select_directory(self):
+        directory = filedialog.askdirectory()
+        if directory:
+            self.save_directory.set(directory)
 
     def start_capture(self):
         try:
@@ -53,10 +63,14 @@ class TimelapseApp:
             messagebox.showerror("Error", "Values must be positive.")
             return
 
-        date = self.create_directory()
+        if not self.check_camera():
+            messagebox.showerror("Error", "Could not access camera.")
+            return
+
+        date_directory = self.create_directory()
         self.capturing.set()  # Start capturing
         self.capture_thread = threading.Thread(
-            target=self.capture_images, args=(date, capture_interval, width, height), daemon=True
+            target=self.capture_images, args=(date_directory, capture_interval, waiting_time, width, height), daemon=True
         )
         self.capture_thread.start()
 
@@ -67,14 +81,19 @@ class TimelapseApp:
 
     def create_directory(self):
         date = datetime.now().strftime("%Y%m%d_%H%M%S")
-        os.makedirs(date, exist_ok=True)
-        return date
+        directory = os.path.join(self.save_directory.get(), date)
+        os.makedirs(directory, exist_ok=True)
+        return directory
 
-    def capture_images(self, date, capture_interval, width, height):
+    def capture_images(self, date_directory, capture_interval, waiting_time, width, height):
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
             messagebox.showerror("Error", "Could not open camera.")
             return
+
+        # Wait for the specified waiting time before starting the capture loop
+        messagebox.showinfo("Info", f"Waiting for {waiting_time} seconds before starting capture.")
+        time.sleep(waiting_time)
 
         try:
             while self.capturing.is_set():
@@ -90,8 +109,10 @@ class TimelapseApp:
                 cv2.imshow("Camera", frame)
 
                 date_time = datetime.now().strftime("%Y%m%d%H%M%S")
-                path = f"./{date}/{date_time}.bmp"
-                cv2.imwrite(path, frame)
+                path = os.path.join(date_directory, f"{date_time}.bmp")
+
+                # Save the image with Unicode handling
+                cv2.imencode('.bmp', frame)[1].tofile(path)
 
                 elapsed_time = time.time() - start_time
                 time_to_sleep = max(0, capture_interval - elapsed_time)
@@ -104,6 +125,16 @@ class TimelapseApp:
         finally:
             cap.release()
             cv2.destroyAllWindows()
+
+    def check_camera(self):
+        cap = cv2.VideoCapture(0)
+        is_opened = cap.isOpened()
+        cap.release()
+        return is_opened
+
+    def exit_app(self):
+        self.stop_capture()
+        self.root.quit()
 
 if __name__ == "__main__":
     root = tk.Tk()
