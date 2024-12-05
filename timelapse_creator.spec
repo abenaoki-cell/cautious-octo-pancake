@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['timelapse_creator.pyw'],
+    ['timelapse_creator.py'],
     pathex=[],
     binaries=[],
     datas=[],
