@@ -1,10 +1,10 @@
 ('C:\\Users\\安部尚希\\OneDrive - Kanazawa '
  'University\\ドキュメント\\cautious-octo-pancake\\dist\\contour_detection_app.exe',
- True,
+ False,
  False,
  False,
  'c:\\Users\\安部尚希\\OneDrive - Kanazawa '
- 'University\\ドキュメント\\cautious-octo-pancake\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\images\\icon-console.ico',
+ 'University\\ドキュメント\\cautious-octo-pancake\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\images\\icon-windowed.ico',
  None,
  False,
  False,
@@ -4037,10 +4037,10 @@
  [],
  False,
  False,
- 1737628858,
- [('run.exe',
+ 1737634191,
+ [('runw.exe',
    'c:\\Users\\安部尚希\\OneDrive - Kanazawa '
-   'University\\ドキュメント\\cautious-octo-pancake\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\run.exe',
+   'University\\ドキュメント\\cautious-octo-pancake\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')],
  'C:\\Program '
  'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.12_3.12.2288.0_x64__qbz5n2kfra8p0\\python312.dll')
