@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 import os
 import numpy as np
 
+
 class ContourApp:
     def __init__(self, root):
         self.root = root
@@ -83,7 +84,11 @@ class ContourApp:
 
             # Read parameters from sliders
             threshold = self.threshold_slider.get()
-            blur_size = max(1, self.blur_slider.get())  # Ensure blur size is at least 1
+            blur_size = self.blur_slider.get()
+
+            # Ensure blur size is odd
+            if blur_size % 2 == 0:
+                blur_size += 1
 
             # Process image
             img_gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
@@ -119,7 +124,12 @@ class ContourApp:
                 cv2.circle(img_color_with_annotations, (center_x, center_y), 5, color, -1)
 
                 # Add annotation to text widget
-                annotation = f"Contour {i+1}: Centroid=({center_x},{center_y})\n"
+                annotation = (
+                    f"Contour {i + 1}:\n"
+                    f"  Centroid = ({center_x}, {center_y})\n"
+                    f"  Bounding Rect = Top-left: ({x}, {y}), "
+                    f"Bottom-right: ({x + w}, {y + h})\n"
+                )
                 self.annotation_text.insert(tk.END, annotation)
 
             self.annotation_text.config(state=tk.DISABLED)
@@ -149,6 +159,7 @@ class ContourApp:
             if file_path:
                 self.processed_image.save(file_path)
                 messagebox.showinfo("Success", "Image saved successfully!")
+
 
 # Run the app
 if __name__ == "__main__":
